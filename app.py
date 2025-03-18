@@ -1,7 +1,11 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 app = Flask(__name__)
+
+# security Key
+app.config['JWT_SECRET_KEY'] = 'super-secret'
+jwt = JWTManager(app)
 
 # Connecting to database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Topher1212@localhost/finance_tracker'
@@ -21,7 +25,31 @@ class Transaction(db.Model):
         return f'<Transaction {self.name}>'
 
 
+users = {
+
+    "chris": "password"
+}
+# logging into Homepage
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    if username in users and users[username] == password:
+        access_token = create_access_token(identity=username)
+        return jsonify({
+            "message": "Login successful!",
+            "access_token": access_token,
+            "user": username
+        }), 200
+
+    return jsonify({"message": "Invalid login"}), 401
+
 # Homepage route
+
+
 @app.route('/')
 def home():
     return jsonify({
@@ -32,6 +60,7 @@ def home():
 
 # going to /transctions page and creating a new transaction
 @app.route('/transactions', methods=['POST'])
+@jwt_required()
 def create_transaction():
     data = request.get_json()
     new_transaction = Transaction(name=data['name'], amount=data['amount'])
@@ -60,6 +89,7 @@ def get_transaction(id):
 
 # Updating transactions
 @app.route('/transactions/<int:id>', methods=['PUT'])
+@jwt_required()
 def update_transaction(id):
     transaction = Transaction.query.get(id)
     if transaction:
@@ -73,6 +103,7 @@ def update_transaction(id):
 
 # Deleting a transaction
 @app.route('/transactions/<int:id>', methods=['DELETE'])
+@jwt_required()
 def delete_transaction(id):
     transaction = Transaction.query.get(id)
     if transaction:
