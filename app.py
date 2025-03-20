@@ -1,11 +1,19 @@
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from werkzeug.middleware.proxy_fix import ProxyFix
 app = Flask(__name__)
 
 # security Key
 app.config['JWT_SECRET_KEY'] = 'super-secret'
 jwt = JWTManager(app)
+
+#coneection to AWS Lambda
+app.wsgi_app = ProxyFix(app.wsgi_app)
+
+def lambda_handler(event, context):
+    from zappa.handler import lambda_handler as lh
+    return lh(event, context)
 
 # Connecting to database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:Topher1212@localhost/finance_tracker'
